@@ -17,14 +17,16 @@ Run every command from the repository root. This page covers the first run. The 
 
 ## 1. Get the code
 
-The official project toolchain is C++26, Clang 21, and libstdc++ 16. Verify
+The official project toolchain is C++23, Clang 21, and libstdc++ 16. C++23 is
+used because the project does not depend on C++26-only facilities and the MSVC
+toolchain available on Windows does not currently support the C++26 dialect in
+the CMake version used by CI. Verify
 that Clang selects GCC 16 before configuring:
 
 ```bash
-clang++-21 -std=c++26 -E -x c++ /dev/null -v
-find /usr/include/c++ -name inplace_vector
-printf '#include <inplace_vector>\nint main() { std::inplace_vector<int, 1> values; }\n' | \
-  clang++-21 --gcc-toolchain=/usr -stdlib=libstdc++ -std=c++26 -x c++ -fsyntax-only -
+clang++-21 -std=c++23 -E -x c++ /dev/null -v
+printf '#include <expected>\nint main() { std::expected<int, int> value = 1; }\n' | \
+  clang++-21 --gcc-toolchain=/usr -stdlib=libstdc++ -std=c++23 -x c++ -fsyntax-only -
 ```
 
 Clone the repository:
@@ -44,7 +46,7 @@ Detect your default Conan profile (first time only) and install the packages:
 # Detect default profile if not done yet
 conan profile detect --force
 
-# Install dependencies for Debug (used by debug, sanitizers, tsan, view-debug presets)
+# Install dependencies for Debug (used by debug, sanitizers, tsan, app-debug presets)
 conan install . --build=missing -s build_type=Debug
 
 # Or for Release (used by release, native presets)
@@ -89,11 +91,11 @@ Configure once. After that, `cmake --build --preset debug` is enough: `.cpp` fil
 karkinolution run
 ```
 
-`run` builds `karkinolution_app` and starts it. It is the same as:
+`run` builds `karkinolution_core` and starts it. It is the same as:
 
 ```bash
-cmake --build build --target karkinolution_app
-./build/karkinolution_app
+cmake --build build --target karkinolution_core
+./build/karkinolution_core
 ```
 
 * The server listens on port `9000` ([`port.hpp`](karkinolution/networking/port.hpp)).
@@ -104,24 +106,24 @@ cmake --build build --target karkinolution_app
 **With the CLI:**
 
 ```bash
-karkinolution setup --preset view-debug
-karkinolution run --preset view-debug
+karkinolution setup --preset app-debug
+karkinolution run --preset app-debug
 ```
 
 **With CMake directly:**
 
 ```bash
-cmake --preset view-debug
-cmake --build --preset view-debug
-./build-view/karkinolution_view
+cmake --preset app-debug
+cmake --build --preset app-debug
+./build-app/karkinolution_app
 ```
 
-When building in `release` mode, both `karkinolution_app` and `karkinolution_view` are built:
+When building in `release` mode, both `karkinolution_core` and `karkinolution_app` are built:
 
 ```bash
 cmake --preset release
 cmake --build --preset release
-./build-release/karkinolution_view
+./build-release/karkinolution_app
 ```
 
 ## 6. Run the tests

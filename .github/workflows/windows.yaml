@@ -1,0 +1,76 @@
+name: Windows
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 21 * * *'
+      timezone: 'America/Sao_Paulo'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit Tests (MSVC)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install Conan
+        shell: pwsh
+        run: python -m pip install conan
+
+      - name: Install Ninja
+        shell: pwsh
+        run: |
+          choco install ninja --yes --no-progress
+          $ninja = (Get-Command ninja).Source
+          if (-not $ninja) {
+            throw "Ninja was not found after installation."
+          }
+
+          & $ninja --version
+          "NINJA_PATH=$ninja" >> $env:GITHUB_ENV
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          conan profile detect --force
+          conan install . --build=missing -s build_type=Debug -s compiler.cppstd=23 -of build-windows
+
+      - name: Verify Conan toolchain
+        shell: pwsh
+        run: |
+          if (-not (Test-Path build-windows/build/generators/conan_toolchain.cmake)) {
+            Get-ChildItem build-windows -Recurse
+            throw "Conan toolchain file was not generated at build-windows/build/generators/conan_toolchain.cmake."
+          }
+
+      - name: Configure with MSVC
+        shell: pwsh
+        run: |
+          $toolchain = (Resolve-Path build-windows/build/generators/conan_toolchain.cmake).Path
+          cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl "-DCMAKE_TOOLCHAIN_FILE=$toolchain" "-DCMAKE_MAKE_PROGRAM=$env:NINJA_PATH"
+
+      - name: Build unit tests
+        shell: pwsh
+        run: cmake --build build-windows --target karkinolution_tests opsiamethystos_tests --parallel 2
+
+      - name: Run unit tests
+        shell: pwsh
+        run: ctest --test-dir build-windows --output-on-failure

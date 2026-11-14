@@ -5,6 +5,7 @@
 #include <array>
 #include <random>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 
 using KShared::Math::LV::CT::NormalizedValue;
@@ -147,13 +148,23 @@ namespace KShared {
 				}
 
 				template <std::floating_point T> T generate() {
-					const auto limit = std::numeric_limits<T>();
-					return std::uniform_real_distribution<T>(limit.lowest(), limit.max())(gen);
+					const auto limit     = std::numeric_limits<T>();
+					const auto magnitude = std::uniform_real_distribution<T>(0, limit.max())(gen);
+					return std::bernoulli_distribution(0.5)(gen) ? -magnitude : magnitude;
 				}
 
 				template <std::integral T> T generate() {
 					const auto limit = std::numeric_limits<T>();
-					return std::uniform_int_distribution<T>(limit.lowest(), limit.max())(gen);
+					using DistributionType =
+						std::conditional_t<std::is_same_v<T, char> || std::is_same_v<T, signed char>
+											   || std::is_same_v<T, unsigned char> || std::is_same_v<T, wchar_t>
+											   || std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t>
+											   || std::is_same_v<T, char32_t>,
+										   std::conditional_t<std::is_signed_v<T>, int, unsigned int>,
+										   T>;
+					return static_cast<T>(std::uniform_int_distribution<DistributionType>(
+						static_cast<DistributionType>(limit.lowest()),
+						static_cast<DistributionType>(limit.max()))(gen));
 				}
 
 				template <Vec2Like T> Vec2 generate() {
