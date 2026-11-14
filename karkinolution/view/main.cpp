@@ -1,5 +1,4 @@
-#include "karkinolution/networking/sdk/src/client/alias.hpp"
-#include "karkinolution/view/client/client.hpp"
+#include "karkinolution/networking/client_side/client/alias.hpp"
 #include "karkinolution/view/screen.hpp"
 #include "karkinolution/view/synchronizer.hpp"
 #include "karkinolution/view/window.hpp"
@@ -34,26 +33,33 @@ int main() {
 
 	KarkinolutionView::Window::init_before_loop(screen_preset);
 
-	Synchronizer                                  synchronizer;
-	const GuiGeometry::Rectangle                  connection_button_bounds{GuiGeometry::Position{100, 40},
-                                                          GuiGeometry::Width{160},
-                                                          GuiGeometry::Height{40}};
-	Components::LowLevel::Button::RectangleButton connection_button{
-		connection_button_bounds,
-		[&synchronizer] {
-			if (synchronizer.is_connected()) {
-				synchronizer.disconnect();
-			} else {
-				synchronizer.connect();
-			}
-		},
-		Components::LowLevel::Button::ButtonStyles{Colors::Presets::DarkGray,
-												   Colors::Presets::Gray,
-												   Colors::Presets::Black},
-		Components::LowLevel::Text{connection_button_bounds, "Connect", Colors::Presets::White, 20}};
-	std::string  connection_button_label{"Connect"};
 	Panel::Panel panel{
 		GuiGeometry::Rectangle{GuiGeometry::Position{400, 225}, GuiGeometry::Width{800}, GuiGeometry::Height{450}}};
+
+	Synchronizer synchronizer{panel};
+
+	auto button_component =
+		std::make_shared<Components::Component>(Components::AllComponents{Components::LowLevel::Button::RectangleButton{
+			GuiGeometry::Rectangle{GuiGeometry::Position{-280, -170}, GuiGeometry::Width{160}, GuiGeometry::Height{40}},
+			[&synchronizer] {
+				if (synchronizer.is_connected()) {
+					synchronizer.disconnect();
+				} else {
+					synchronizer.connect();
+				}
+			},
+			Components::LowLevel::Button::ButtonStyles{Colors::Presets::DarkGray,
+													   Colors::Presets::Gray,
+													   Colors::Presets::Black},
+			"Connect",
+			Colors::Presets::White,
+			20}});
+	if (!panel.add(button_component)) {
+		throw std::runtime_error("Failed to add connection button to its panel");
+	}
+
+	std::string connection_button_label{"Connect"};
+
 	auto grid_component = std::make_shared<Components::Component>(
 		Components::AllComponents{Opsiamethystos::Gui::Components::MediumLevel::Grid{
 			GuiGeometry::Rectangle{GuiGeometry::Position{0, 35}, GuiGeometry::Width{400}, GuiGeometry::Height{240}},
@@ -93,10 +99,10 @@ int main() {
 
 		const std::string_view connection_label = synchronizer.is_connected() ? "Disconnect" : "Connect";
 		if (connection_label != connection_button_label) {
-			connection_button.set_text(std::string{connection_label});
+			std::get<Components::LowLevel::Button::RectangleButton>(button_component->get_data())
+				.set_text(std::string{connection_label});
 			connection_button_label = std::string{connection_label};
 		}
-		connection_button.run();
 
 		for (const auto id : panel.collides(GuiGeometry::Rectangle{GuiGeometry::Position{0, 0},
 																   GuiGeometry::Width{800},
@@ -107,12 +113,11 @@ int main() {
 			}
 
 			std::visit(
-				[&grid_colors, &panel](const auto &visible_component) {
+				[&grid_colors, &panel](auto &visible_component) {
 					using VisibleComponent = std::remove_cvref_t<decltype(visible_component)>;
-					// Components are indexed and queried in panel-local coordinates. The
-					// accumulated origin is added only at rendering time, so dragging does
-					// not rewrite every component or quadtree entry.
-					if constexpr (requires { visible_component.draw(panel.origin()); }) {
+					if constexpr (std::is_same_v<VisibleComponent, Components::LowLevel::Button::RectangleButton>) {
+						visible_component.run(panel.origin());
+					} else if constexpr (requires { visible_component.draw(panel.origin()); }) {
 						visible_component.draw(panel.origin());
 					}
 

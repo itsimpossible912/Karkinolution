@@ -1,9 +1,9 @@
 #pragma once
 
-#include "karkinolution/binary/fields.hpp"
-#include "karkinolution/networking/simulation/config_output.hpp"
-#include "karkinolution/networking/simulation/world_state.hpp"
+#include "karkinolution/networking/config_output.hpp"
+#include "karkinolution/networking/world_state.hpp"
 #include "karkinolution/world/world.hpp"
+#include "shared/binary/fields.hpp"
 
 #include <array>
 #include <cstddef>
@@ -29,40 +29,37 @@ namespace Karkinolution {
 
 					namespace Layout {
 						namespace WorldState {
-							using HasOwnerId = Binary::Field<0, 1>;
-							using OwnerId    = Binary::Next<HasOwnerId, sizeof(World::WorldId)>;
+							using HasOwnerId = KShared::Binary::Field<0, 1>;
+							using OwnerId    = KShared::Binary::Next<HasOwnerId, sizeof(World::WorldId)>;
 
 							inline constexpr std::size_t TotalSize = OwnerId::END;
 						} // namespace WorldState
 
 						namespace ConfigOutput {
-							using CouldConnect = Binary::Field<0, 1>;
+							using CouldConnect = KShared::Binary::Field<0, 1>;
 
 							inline constexpr std::size_t TotalSize = CouldConnect::END;
 						} // namespace ConfigOutput
 					} // namespace Layout
 
-					std::array<std::byte, Layout::WorldState::TotalSize>
-					serialize(const Simulation::WorldState &world_state);
-					std::array<std::byte, Layout::ConfigOutput::TotalSize>
-					serialize(const Simulation::ConfigOutput &output);
+					std::array<std::byte, Layout::WorldState::TotalSize>   serialize(const WorldState &world_state);
+					std::array<std::byte, Layout::ConfigOutput::TotalSize> serialize(const ConfigOutput &output);
 				} // namespace SRI
 
 				namespace DSI {
 
 
-					Simulation::WorldState get_world_state(const std::vector<std::byte> &bytes, std::size_t offset = 0);
+					WorldState get_world_state(const std::vector<std::byte> &bytes, std::size_t offset = 0);
 					std::vector<World::WorldId> get_world_ids(const std::vector<std::byte> &bytes,
 															  std::size_t                   offset = 0);
-					Simulation::ConfigOutput    get_config_output(const std::vector<std::byte> &bytes,
-																  std::size_t                   offset = 0);
+					ConfigOutput get_config_output(const std::vector<std::byte> &bytes, std::size_t offset = 0);
 				} // namespace DSI
 
 				namespace SystemCall {
 					namespace SRI {
 						namespace Layout {
 							namespace Config {
-								using WorldId                           = Binary::Field<0, sizeof(World::WorldId)>;
+								using WorldId = KShared::Binary::Field<0, sizeof(World::WorldId)>;
 								inline constexpr std::size_t TOTAL_SIZE = WorldId::END;
 							} // namespace Config
 						} // namespace Layout
@@ -81,7 +78,7 @@ namespace Karkinolution {
 
 
 						std::array<std::byte, Interpreter::SRI::Layout::ConfigOutput::TotalSize>
-						make_config_output(const Simulation::ConfigOutput &output);
+						make_config_output(const ConfigOutput &output);
 					} // namespace SRI
 
 				} // namespace SystemOutput
