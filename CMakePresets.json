@@ -213,20 +213,6 @@
         "sanitizer-thread"
       ],
       "binaryDir": "${sourceDir}/build-ci-libcxx-tsan"
-    },
-    {
-      "name": "app-debug",
-      "displayName": "Debug with Application (raylib)",
-      "inherits": [
-        "base",
-        "clang",
-        "conan-debug"
-      ],
-      "binaryDir": "${sourceDir}/build-app",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "KARKINOLUTION_BUILD_APP": true
-      }
     }
   ],
   "buildPresets": [
@@ -324,13 +310,6 @@
         "karkinolution_core_tests",
         "kshared_tests",
         "karkinolution_core"
-      ]
-    },
-    {
-      "name": "app-debug",
-      "configurePreset": "app-debug",
-      "targets": [
-        "karkinolution_app"
       ]
     },
     {
