@@ -1,0 +1,37 @@
+name: Android core
+on:
+  workflow_dispatch:
+  push:
+    branches: [android]
+    paths: ['android/**', '.github/workflows/android.yaml']
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install conan ninja
+      - name: NDK
+        run: |
+          NDK="$ANDROID_NDK_LATEST_HOME"
+          CLANG="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          $CLANG --version
+          V=$($CLANG --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p')
+          conan profile detect
+          cat > android.profile <<P
+          [settings]
+          os=Android
+          os.api_level=24
+          arch=armv8
+          compiler=clang
+          compiler.version=$V
+          compiler.libcxx=c++_static
+          compiler.cppstd=23
+          build_type=Release
+          [conf]
+          tools.android:ndk_path=$NDK
+          P
+      - run: conan install . -pr:h android.profile -pr:b default --build=missing
+      - run: |
+          cmake -S . -B build/android -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake
+          cmake --build build/android --target kk_bridge
