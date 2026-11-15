@@ -49,22 +49,22 @@ file(GLOB_RECURSE KARKINOLUTION_SHARED_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/shared/*.cpp"
 )
 
-add_library(karkinolution_shared)
+add_library(kshared)
 
-set_target_properties(karkinolution_shared PROPERTIES
+set_target_properties(kshared PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-target_sources(karkinolution_shared
+target_sources(kshared
     PRIVATE
         ${KARKINOLUTION_SHARED_SOURCES}
 )
 
-target_include_directories(karkinolution_shared PUBLIC
+target_include_directories(kshared PUBLIC
     "${CMAKE_SOURCE_DIR}"
 )
 
-target_link_libraries(karkinolution_shared
+target_link_libraries(kshared
     PUBLIC
         magic_enum::magic_enum
 )
@@ -75,37 +75,47 @@ file(GLOB_RECURSE KARKINOLUTION_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/karkinolution/*.cpp"
 )
 
-list(FILTER KARKINOLUTION_SOURCES EXCLUDE REGEX ".*/main.cpp$")
+list(FILTER KARKINOLUTION_SOURCES EXCLUDE REGEX ".*/karkinolution/(server|client)\\.cpp$")
 
-add_library(karkinolution)
+add_library(karkinolution_core)
 
-set_target_properties(karkinolution PROPERTIES
+set_target_properties(karkinolution_core PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-target_sources(karkinolution
+target_sources(karkinolution_core
     PRIVATE
         ${KARKINOLUTION_SOURCES}
 )
 
-target_include_directories(karkinolution PUBLIC
+target_include_directories(karkinolution_core PUBLIC
     "${CMAKE_SOURCE_DIR}"
 )
 
-target_link_libraries(karkinolution
+target_link_libraries(karkinolution_core
     PUBLIC
         FastNoise2::FastNoise
         asio::asio
         magic_enum::magic_enum
-        karkinolution_shared
+        kshared
 )
 
-# ---------------- Core executable ----------------
+# ---------------- Server executable ----------------
 
-add_executable(karkinolution_core karkinolution/main.cpp)
+add_executable(karkinolution_server karkinolution/server.cpp)
 
-target_link_libraries(karkinolution_core PRIVATE
-    karkinolution
+target_link_libraries(karkinolution_server PRIVATE
+    karkinolution_core
+    kshared
+)
+
+# ---------------- Client executable ----------------
+
+add_executable(karkinolution_client karkinolution/client.cpp)
+
+target_link_libraries(karkinolution_client PRIVATE
+    karkinolution_core
+    kshared
 )
 
 
