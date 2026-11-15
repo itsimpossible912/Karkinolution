@@ -9,7 +9,7 @@ int main() {
         std::printf("servidor: %d\n", kk_start_server());
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         std::printf("conectar: %d\n", kk_connect());
-        for (int i = 0; i < 3; ++i) std::printf("criar: %d\n", kk_create_creature());
+        for (int i = 0; i < 3; ++i) std::printf("criar: %d\n", kk_create_creature("FISH", 10.0, 20.0));
         std::vector<char> buf(65536);
         int n = kk_snapshot(buf.data(), (int)buf.size());
         std::printf("estado (%d bytes): %s\n", n, buf.data());

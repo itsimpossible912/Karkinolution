@@ -18,6 +18,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -103,11 +104,18 @@ extern "C" void kk_disconnect() {
         g_world.reset();
 }
 
-extern "C" int kk_create_creature() {
+extern "C" int kk_create_creature(const char *species, double x, double y) {
         std::lock_guard lock(g_mutex);
         if (!g_client || !g_world) return 1;
         try {
-                return CC::make_creature(*g_client, *g_world, std::nullopt, std::nullopt, std::nullopt, std::nullopt) ? 0 : 2;
+                std::optional<CW::CreatureSpecies> sp;
+                if (species && *species) {
+                        sp = magic_enum::enum_cast<CW::CreatureSpecies>(std::string_view(species));
+                        if (!sp) return 4;
+                }
+                return CC::make_creature(*g_client, *g_world, std::nullopt, sp,
+                                         std::optional<KShared::Math::Vec::Vec2>(KShared::Math::Vec::Vec2(x, y)),
+                                         std::nullopt) ? 0 : 2;
         } catch (...) {
                 return 3;
         }
@@ -132,13 +140,13 @@ extern "C" int kk_tick_all() {
 extern "C" int kk_snapshot(char *buf, int cap) {
         std::lock_guard lock(g_mutex);
         std::ostringstream o;
-        o << "{\"creatures\":[";
+        o << "{\"world\":{\"w\":100,\"h\":100},\"creatures\":[";
         if (g_world) {
                 bool first = true;
                 for (const auto &c : g_world->get_creatures()) {
                         if (!first) o << ",";
                         first = false;
-                        o << "{\"id\":" << static_cast<unsigned long long>(c.id)
+                        o << "{\"id\":\"" << static_cast<unsigned long long>(c.id) << "\""
                           << ",\"name\":\"" << esc(c.name) << "\""
                           << ",\"species\":\"" << magic_enum::enum_name(c.specie) << "\""
                           << ",\"gender\":\"" << magic_enum::enum_name(c.gender) << "\""

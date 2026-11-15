@@ -34,4 +34,8 @@ jobs:
       - run: |
           cmake -S . -B build/android -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake
-          cmake --build build/android --target kk_bridge
+          cmake --build build/android --target kk_jni
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkk_jni
+          path: build/android/libkk_jni.so
