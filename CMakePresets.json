@@ -410,54 +410,6 @@
         "karkinolution_shared",
         "kshared_tests"
       ]
-    },
-    {
-      "name": "opsiamethystos-debug",
-      "displayName": "opsiamethystos: Debug build of opsiamethystos",
-      "configurePreset": "debug",
-      "targets": [
-        "opsiamethystos"
-      ]
-    },
-    {
-      "name": "opsiamethystos-sanitizers",
-      "displayName": "opsiamethystos: Debug with AddressSanitizer and UBSan",
-      "configurePreset": "sanitizers",
-      "targets": [
-        "opsiamethystos"
-      ]
-    },
-    {
-      "name": "opsiamethystos-tsan",
-      "displayName": "opsiamethystos: Debug with ThreadSanitizer",
-      "configurePreset": "tsan",
-      "targets": [
-        "opsiamethystos"
-      ]
-    },
-    {
-      "name": "opsiamethystos-ci",
-      "displayName": "opsiamethystos: CI Debug build",
-      "configurePreset": "ci",
-      "targets": [
-        "opsiamethystos"
-      ]
-    },
-    {
-      "name": "opsiamethystos-ci-sanitizers",
-      "displayName": "opsiamethystos: CI Debug with AddressSanitizer and UBSan",
-      "configurePreset": "ci-sanitizers",
-      "targets": [
-        "opsiamethystos"
-      ]
-    },
-    {
-      "name": "opsiamethystos-ci-tsan",
-      "displayName": "opsiamethystos: CI Debug with ThreadSanitizer",
-      "configurePreset": "ci-tsan",
-      "targets": [
-        "opsiamethystos"
-      ]
     }
   ],
   "testPresets": [
