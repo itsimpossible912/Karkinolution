@@ -1,8 +1,16 @@
+#include "karkinolution/api/creature.hpp"
 #include "karkinolution/networking/client_side/client/client.hpp"
+#include "karkinolution/networking/client_side/interpreters/corpse.hpp"
+#include "karkinolution/networking/client_side/interpreters/creature.hpp"
 #include "karkinolution/networking/client_side/interpreters/soil.hpp"
 #include "karkinolution/networking/client_side/interpreters/system.hpp"
+#include "karkinolution/networking/client_side/world/commanders/corpse.hpp"
+#include "karkinolution/networking/client_side/world/commanders/creature.hpp"
+#include "karkinolution/networking/client_side/world/commanders/soil.hpp"
 #include "karkinolution/networking/port.hpp"
 #include "karkinolution/networking/server_side/server/server.hpp"
+#include "karkinolution/organism/entities/corpse/physiology.hpp"
+#include "karkinolution/organism/entities/creature/constructor.hpp"
 #include "karkinolution/test/utils.hpp"
 #include "karkinolution/world/world_storage.hpp"
 
@@ -16,6 +24,10 @@ using Karkinolution::Networking::IoContext;
 using Karkinolution::Networking::PORT;
 using Karkinolution::Networking::ClientSide::Client::Client;
 using Karkinolution::Networking::ClientSide::Client::Config;
+using Karkinolution::Networking::ClientSide::World::Commanders::Corpse::tick_corpse;
+using Karkinolution::Networking::ClientSide::World::Commanders::Creature::tick_creature;
+using Karkinolution::Networking::ClientSide::World::Commanders::Soil::tick_soil;
+using LocalWorld = Karkinolution::Networking::ClientSide::World::World;
 using Karkinolution::World::World;
 using Karkinolution::World::WorldId;
 using Karkinolution::World::WorldStorage;
@@ -79,6 +91,143 @@ TEST_F(ClientTest, ServerE2E) {
 	server_thread.join();
 
 	EXPECT_EQ(failures.load(), 0);
+}
+
+TEST_F(ClientTest, CreatureTickReturnsUpdatedCreatureAndUpdatesLocalWorld) {
+	IoContext server_io;
+
+	World      server_world = TestUtils::make_small_world();
+	const auto created      = Karkinolution::API::Creature::make_creature(server_world,
+                                                                     std::nullopt,
+                                                                     std::nullopt,
+                                                                     std::nullopt,
+                                                                     std::nullopt);
+	ASSERT_TRUE(created);
+	const auto creature_id = created->ontology.id;
+
+	WorldStorage storage;
+	ASSERT_TRUE(storage.add(std::move(server_world)));
+	ServerType application_server{server_io, PORT, storage};
+
+	std::thread server_thread{[&] {
+		server_io.run();
+	}};
+
+	LocalWorld local_world;
+	bool       succeeded = false;
+	{
+		Client client{io, Config{.host = "127.0.0.1", .port = PORT}};
+		try {
+			client.connect();
+			ASSERT_TRUE(SystemInterpreter::config(client, storage.get_all_world_ids().front()).value_or(false));
+			EXPECT_FALSE(CreatureInterpreter::tick_creature(client, KShared::Core::Id::gen_id()));
+			const auto initial = CreatureInterpreter::see_creature(client, creature_id);
+			ASSERT_TRUE(initial);
+			ASSERT_TRUE(local_world.add(*initial));
+			succeeded = tick_creature(client, local_world, creature_id);
+		} catch (const std::exception &error) {
+			ADD_FAILURE() << "Creature tick failed: " << error.what();
+		}
+		client.stop_new_async_operations();
+		client.wait_until_zero_async_operations();
+	}
+
+	asio::post(server_io, [&] {
+		application_server.stop();
+	});
+	server_thread.join();
+
+	EXPECT_TRUE(succeeded);
+	EXPECT_TRUE(local_world.has_creature(creature_id));
+}
+
+TEST_F(ClientTest, CorpseTickReturnsUpdatedCorpseAndUpdatesLocalWorld) {
+	IoContext server_io;
+
+	World server_world = TestUtils::make_small_world();
+	auto  creature = Karkinolution::Organisms::Entities::Creature::Constructor::CreatureConstructor::from_blueprint();
+	auto  corpse   = Karkinolution::Organisms::Entities::Corpse::Physiology::generate_corpse(creature);
+	const auto corpse_id = corpse.id;
+	ASSERT_TRUE(server_world.add(std::move(corpse)));
+
+	WorldStorage storage;
+	const auto   world_id = server_world.get_id();
+	ASSERT_TRUE(storage.add(std::move(server_world)));
+	ServerType application_server{server_io, PORT, storage};
+
+	std::thread server_thread{[&] {
+		server_io.run();
+	}};
+
+	LocalWorld local_world;
+	bool       succeeded = false;
+	{
+		Client client{io, Config{.host = "127.0.0.1", .port = PORT}};
+		try {
+			client.connect();
+			ASSERT_TRUE(SystemInterpreter::config(client, world_id).value_or(false));
+			EXPECT_FALSE(CorpseInterpreter::tick_corpse(client, KShared::Core::Id::gen_id()));
+			const auto initial = CorpseInterpreter::see_corpse(client, corpse_id);
+			ASSERT_TRUE(initial);
+			ASSERT_TRUE(local_world.add(*initial));
+			succeeded = tick_corpse(client, local_world, corpse_id);
+		} catch (const std::exception &error) {
+			ADD_FAILURE() << "Corpse tick failed: " << error.what();
+		}
+		client.stop_new_async_operations();
+		client.wait_until_zero_async_operations();
+	}
+
+	asio::post(server_io, [&] {
+		application_server.stop();
+	});
+	server_thread.join();
+
+	EXPECT_TRUE(succeeded);
+	EXPECT_TRUE(local_world.has_corpse(corpse_id));
+}
+
+TEST_F(ClientTest, SoilTickReturnsUpdatedSoilAndUpdatesLocalWorld) {
+	IoContext server_io;
+
+	World      server_world = TestUtils::make_small_world();
+	const auto soil_id      = server_world.see_territory().registry().begin()->first;
+
+	WorldStorage storage;
+	const auto   world_id = server_world.get_id();
+	ASSERT_TRUE(storage.add(std::move(server_world)));
+	ServerType application_server{server_io, PORT, storage};
+
+	std::thread server_thread{[&] {
+		server_io.run();
+	}};
+
+	LocalWorld local_world;
+	bool       succeeded = false;
+	{
+		Client client{io, Config{.host = "127.0.0.1", .port = PORT}};
+		try {
+			client.connect();
+			ASSERT_TRUE(SystemInterpreter::config(client, world_id).value_or(false));
+			EXPECT_FALSE(SoilInterpreter::tick_soil(client, KShared::Core::Id::gen_id()));
+			const auto initial = SoilInterpreter::see_soil(client, soil_id);
+			ASSERT_TRUE(initial);
+			ASSERT_TRUE(local_world.add(*initial));
+			succeeded = tick_soil(client, local_world, soil_id);
+		} catch (const std::exception &error) {
+			ADD_FAILURE() << "Soil tick failed: " << error.what();
+		}
+		client.stop_new_async_operations();
+		client.wait_until_zero_async_operations();
+	}
+
+	asio::post(server_io, [&] {
+		application_server.stop();
+	});
+	server_thread.join();
+
+	EXPECT_TRUE(succeeded);
+	EXPECT_TRUE(local_world.has_soil(soil_id));
 }
 
 TEST_F(ClientTest, ServerAcceptsNewClientAfterDisconnect) {

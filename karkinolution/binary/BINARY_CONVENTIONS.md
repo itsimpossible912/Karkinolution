@@ -24,6 +24,11 @@ Protocol-specific aliases, validators, numeric-type mappings, interpreters, and 
 - **Core**:
   - `src/shared/binary/serializer.[hpp|cpp]`
   - `src/shared/binary/deserializer.hpp`
+- **Generic binary types**:
+  - `src/shared/binary/types/function_concepts.hpp`
+  - `src/shared/binary/types/list.hpp`
+  - Generic list serialization belongs to `KShared::Binary::Types`; it must not depend on Karkinolution protocol
+    contracts or domain models.
 - **Interpreters**:
   - Domain interpreters: `src/karkinolution/binary/interpreters/<name>.[hpp|cpp]`
   - Shared mathematical interpreters: `src/shared/binary/interpreters/<name>.[hpp|cpp]`
@@ -177,6 +182,22 @@ connections. The response payload is a separate one-byte boolean indicating whet
   frame. It includes the declared-size field; do not add `TOTAL_HEADER_SIZE` to it again.
 - The parser-level size dispatchers receive the frame type and `Protocol::Detail::CodeVariant` subtype and route to the
   corresponding request-operation, response, or error calculation.
+
+## Creature cycle operation
+
+`CYCLE CREATURE <id>` uses the existing eight-byte creature ID payload and the `CYCLE` request operation. The server
+executes one creature motor tick through `CreatureAPI::tick`. A present creature is returned as a `CREATURE` response
+with cardinality `ONE`; an unknown or removed creature returns a `NONE` response.
+
+`CYCLE SOIL <id>` follows the same layout and response cardinality. The server executes one soil motor tick and returns
+the updated soil as a `SOIL` response, or `NONE` when the soil ID is absent.
+
+## Domain-specific payload layouts
+
+Exact payload layouts belong beside the SRI declaration that owns them. For example, the `CREATURE` response layout,
+its grouped transport data, field offsets, and total size are documented in the `CREATURE PROTOCOL` block in
+`karkinolution/binary/interpreters/creature.hpp`. This document defines reusable binary rules; it does not duplicate
+domain-specific layouts.
 
 ## Frame Detection
 

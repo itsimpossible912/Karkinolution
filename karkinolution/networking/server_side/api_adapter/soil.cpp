@@ -8,9 +8,9 @@
 #include <karkinolution/api/soil.hpp>
 #include <karkinolution/binary/frames/motor.hpp>
 #include <karkinolution/binary/interpreters/soil.hpp>
-#include <karkinolution/binary/types/list.hpp>
 #include <karkinolution/networking/server_side/api_adapter/soil.hpp>
 #include <ranges>
+#include <shared/binary/types/list.hpp>
 
 namespace Karkinolution::Networking::ServerSide::APIBYA::Soil {
 	ResponseFrame see_soil(const Karkinolution::World::World &world,
@@ -20,7 +20,7 @@ namespace Karkinolution::Networking::ServerSide::APIBYA::Soil {
 
 		auto soil = Karkinolution::API::Soil::see_soil(world, id);
 
-		if (soil == nullptr) {
+		if (!soil) {
 			return Karkinolution::Binary::Frames::Motor::make_none_response(request_id);
 		}
 		const auto soil_payload = SoilSRI::serialize_soil(*soil);
@@ -30,12 +30,36 @@ namespace Karkinolution::Networking::ServerSide::APIBYA::Soil {
 																   Binary::ResponseCardinality::ONE);
 	}
 
+	ResponseFrame
+	tick_soil(Karkinolution::World::World &world, Binary::RequestId request_id, const std::vector<std::byte> &payload) {
+		const auto id   = SoilDSI::Request::interpret_like_get_soil(payload);
+		const auto soil = Karkinolution::API::Soil::tick(world, id);
+
+		if (!soil) {
+			return Karkinolution::Binary::Frames::Motor::make_none_response(request_id);
+		}
+
+		const auto soil_payload = SoilSRI::serialize_soil(*soil);
+		return Karkinolution::Binary::Frames::Motor::make_response(Binary::ResponseSubTypes::SOIL,
+																   request_id,
+																   soil_payload,
+																   Binary::ResponseCardinality::ONE);
+	}
+
+	ResponseFrame erase_soil(Karkinolution::World::World  &world,
+							 Binary::RequestId             request_id,
+							 const std::vector<std::byte> &payload) {
+		const auto id = SoilDSI::Request::interpret_like_get_soil(payload);
+		return Karkinolution::Binary::Frames::Motor::make_boolean_response(request_id,
+																		   Karkinolution::API::Soil::erase(world, id));
+	}
+
 	ResponseFrame see_all_soils(const Karkinolution::World::World &world,
 								Binary::RequestId                  request_id,
 								const std::vector<std::byte>      &payload) {
 		const auto &all_soils = Karkinolution::API::Soil::see_all_soils(world);
 
-		std::vector<std::byte> r_payload = Binary::Types::List::SRI::serialize<SoilSRI::Layout::TOTAL_SIZE>(
+		std::vector<std::byte> r_payload = KShared::Binary::Types::List::SRI::serialize<SoilSRI::Layout::TOTAL_SIZE>(
 			std::views::values(all_soils),
 			[](const Karkinolution::Terrain::Soil::SoilPiece &soil) {
 				return SoilSRI::serialize_soil(soil);

@@ -142,6 +142,30 @@ namespace Karkinolution::Networking::ClientSide::World {
 		return entities.add(corpse);
 	}
 
+	bool World::update(const Creature &creature) {
+		return entities.update(creature);
+	}
+
+	bool World::update(const Corpse &corpse) {
+		return entities.update(corpse);
+	}
+
+	bool World::update(const Soil &soil) {
+		return territory.update(soil);
+	}
+
+	bool World::remove_creature(OrganismId id) {
+		return entities.remove_creature(id);
+	}
+
+	bool World::remove_corpse(OrganismId id) {
+		return entities.remove_corpse(id);
+	}
+
+	bool World::remove_soil(SoilId id) {
+		return territory.remove_soil(id);
+	}
+
 	bool World::has_creature(OrganismId id) const {
 		return entities.has_creature(id);
 	}
