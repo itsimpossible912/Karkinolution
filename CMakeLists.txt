@@ -122,3 +122,8 @@ target_link_libraries(karkinolution_client PRIVATE
 # ---------------- Tests ----------------
 
 add_subdirectory(tests)
+
+add_library(kk_bridge STATIC android/kk_bridge.cpp)
+target_link_libraries(kk_bridge PUBLIC karkinolution_core kshared)
+add_executable(kk_bridge_test android/bridge_test.cpp)
+target_link_libraries(kk_bridge_test PRIVATE kk_bridge)
