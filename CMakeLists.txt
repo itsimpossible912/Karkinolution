@@ -18,7 +18,6 @@ if (ENABLE_ASAN AND SANITIZER STREQUAL "")
     set(SANITIZER "address")
 endif ()
 
-option(KARKINOLUTION_BUILD_APP "Build karkinolution_app target" OFF)
 
 enable_testing()
 
@@ -27,7 +26,6 @@ enable_testing()
 find_package(FastNoise2 CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
-find_package(raylib CONFIG REQUIRED)
 
 # ---------------- Sanitizers ----------------
 
@@ -71,33 +69,6 @@ target_link_libraries(karkinolution_shared
         magic_enum::magic_enum
 )
 
-# ---------------- Opsiamethystos library ----------------
-
-file(GLOB_RECURSE OPSIAMETHYSTOS_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_SOURCE_DIR}/opsiamethystos/*.cpp"
-)
-
-add_library(opsiamethystos)
-
-set_target_properties(opsiamethystos PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-)
-
-target_sources(opsiamethystos
-    PRIVATE
-        ${OPSIAMETHYSTOS_SOURCES}
-)
-
-target_include_directories(opsiamethystos PUBLIC
-    "${CMAKE_SOURCE_DIR}"
-)
-
-target_link_libraries(opsiamethystos
-    PUBLIC
-        karkinolution_shared
-        raylib
-)
-
 # ---------------- Library ----------------
 
 file(GLOB_RECURSE KARKINOLUTION_SOURCES CONFIGURE_DEPENDS
@@ -137,23 +108,6 @@ target_link_libraries(karkinolution_core PRIVATE
     karkinolution
 )
 
-# ---------------- Application executable ----------------
-
-if (KARKINOLUTION_BUILD_APP)
-    file(GLOB_RECURSE KARKINOLUTION_APP_SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/app/*.cpp"
-    )
-
-    add_executable(karkinolution_app
-        ${KARKINOLUTION_APP_SOURCES}
-    )
-
-    target_link_libraries(karkinolution_app PRIVATE
-        karkinolution
-        opsiamethystos
-        raylib
-    )
-endif ()
 
 # ---------------- Tests ----------------
 

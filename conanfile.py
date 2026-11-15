@@ -13,13 +13,11 @@ class Karkinolution(ConanFile):
         "asio/1.38.2",
         "gtest/1.18.0",
         "magic_enum/0.9.8",
-        "raylib/6.0",
     )
 
     default_options = {
         "fastnoise2/*:shared": False,
         "gtest/*:shared": False,
-        "raylib/*:shared": False,
     }
 
     def layout(self):
